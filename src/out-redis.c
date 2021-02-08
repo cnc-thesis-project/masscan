@@ -315,6 +315,62 @@ redis_out_banner(struct Output *out, FILE *fp, time_t timestamp,
 
 /****************************************************************************
  ****************************************************************************/
+static void
+redis_queue_out_status(struct Output *out, FILE *fp, time_t timestamp,
+    int status, ipaddress ip, unsigned ip_proto, unsigned port, unsigned reason, unsigned ttl)
+{
+    ptrdiff_t fd = (ptrdiff_t)fp;
+    char line[1024];
+    int line_length;
+    char ip_string[64];
+    char port_string[10];
+    int ip_string_length;
+    int port_string_length;
+    size_t count;
+    char values[64];
+    int values_length;
+
+    ip_string_length = sprintf_s(ip_string, sizeof(ip_string), "%s", ipaddress_fmt(ip).string);
+    port_string_length = sprintf_s(port_string, sizeof(port_string), "%u,%s", port, name_from_ip_proto(ip_proto));
+
+/**3
+$5
+RPUSH
+$5
+mykey
+$7
+myvalue
+*/
+
+    /*
+     * KEY: ip:port
+     * VALUE: ip,port,timestamp:status:reason:ttl
+     */
+    values_length = sprintf_s(values, sizeof(values), "%s,%s,%u,%u,%u,%u",
+        ip_string, port_string, (unsigned)timestamp, status, reason, ttl);
+    line_length = sprintf_s(line, sizeof(line),
+            "*3\r\n"
+            "$5\r\nRPUSH\r\n"
+            "$%d\r\n%s\r\n"
+            "$%d\r\n%s\r\n"
+            ,
+            4, "port",
+            values_length, values
+            );
+
+    count = send((SOCKET)fd, line, (int)line_length, 0);
+    if (count != (size_t)line_length) {
+        LOG(0, "redis: error sending data\n");
+        exit(1);
+    }
+    out->redis.outstanding++;
+
+    clean_response_queue(out, (SOCKET)fd);
+
+}
+
+/****************************************************************************
+ ****************************************************************************/
 const struct OutputType redis_output = {
     "redis",
     0,
@@ -325,4 +381,13 @@ const struct OutputType redis_output = {
 };
 
 
-
+/****************************************************************************
+ ****************************************************************************/
+const struct OutputType redis_queue_output = {
+    "redis-queue",
+    0,
+    redis_out_open,
+    redis_out_close,
+    redis_queue_out_status,
+    redis_out_banner
+};

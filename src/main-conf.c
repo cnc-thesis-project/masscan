@@ -1240,7 +1240,12 @@ static int SET_output_format(struct Masscan *masscan, const char *name, const ch
                             ipaddress_fmt(masscan->redis.ip).string,
                             masscan->redis.port);
                 break;
-                
+            case Output_Redis_Queue:
+                fprintf(fp, "output-format = redis-queue\n");
+                fprintf(fp, "redis = %s %u\n",
+                            ipaddress_fmt(masscan->redis.ip).string,
+                            masscan->redis.port);
+                break;
             default:
                 fprintf(fp, "output-format = unknown(%u)\n", masscan->output.format);
                 break;
@@ -1260,6 +1265,7 @@ static int SET_output_format(struct Masscan *masscan, const char *name, const ch
     else if (EQUALS("certs", value))        x = Output_Certs;
     else if (EQUALS("none", value))         x = Output_None;
     else if (EQUALS("redis", value))        x = Output_Redis;
+    else if (EQUALS("redis-queue", value))  x = Output_Redis_Queue;
     else if (EQUALS("hostonly", value))     x = Output_Hostonly;
     else {
         LOG(0, "FAIL: unknown output-format: %s\n", value);
@@ -2212,7 +2218,7 @@ masscan_set_parameter(struct Masscan *masscan,
         masscan->op = Operation_ReadRange;
     } else if (EQUALS("reason", name)) {
         masscan->output.is_reason = 1;
-    } else if (EQUALS("redis", name)) {
+    } else if (EQUALS("redis", name) || EQUALS("redis-queue", name)) {
         struct Range range;
         unsigned offset = 0;
         unsigned max_offset = (unsigned)strlen(value);
@@ -2240,7 +2246,11 @@ masscan_set_parameter(struct Masscan *masscan,
         masscan->redis.ip.version = 4;
 
         masscan->redis.port = port;
-        masscan->output.format = Output_Redis;
+        if (EQUALS("redis", name))
+            masscan->output.format = Output_Redis;
+        else
+            masscan->output.format = Output_Redis_Queue;
+
         strcpy_s(masscan->output.filename, 
                  sizeof(masscan->output.filename), 
                  "<redis>");

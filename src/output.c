@@ -171,7 +171,7 @@ open_rotate(struct Output *out, const char *filename)
     /*
      * KLUDGE: do something special for redis
      */
-    if (out->format == Output_Redis) {
+    if (out->format == Output_Redis || out->format == Output_Redis_Queue) {
         ptrdiff_t fd = out->redis.fd;
         if (fd < 1) {
             struct sockaddr_in sin = {0};
@@ -245,7 +245,7 @@ close_rotate(struct Output *out, FILE *fp)
     memset(&out->counts, 0, sizeof(out->counts));
 
     /* Redis Kludge*/
-    if (out->format == Output_Redis)
+    if (out->format == Output_Redis || out->format == Output_Redis_Queue)
         return;
 
     fflush(fp);
@@ -440,6 +440,9 @@ output_create(const struct Masscan *masscan, unsigned thread_index)
         break;
     case Output_Redis:
         out->funcs = &redis_output;
+        break;
+    case Output_Redis_Queue:
+        out->funcs = &redis_queue_output;
         break;
     case Output_Hostonly:
         out->funcs = &hostonly_output;

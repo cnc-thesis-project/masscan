@@ -54,7 +54,8 @@ enum OutputFormat {
     Output_Nmap         = 0x0020,
     Output_ScriptKiddie = 0x0040,
     Output_Grepable     = 0x0080,   /* -oG, "grepable" */
-    Output_Redis        = 0x0100, 
+    Output_Redis        = 0x0100,
+    Output_Redis_Queue  = 0x0101,
     Output_Unicornscan  = 0x0200,   /* -oU, "unicornscan" */
     Output_None         = 0x0400,
     Output_Certs        = 0x0800,
