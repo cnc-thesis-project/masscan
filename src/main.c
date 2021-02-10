@@ -228,6 +228,7 @@ transmit_thread(void *v) /*aka. scanning_thread() */
     uint64_t repeats = 0; /* --infinite repeats */
     uint64_t *status_syn_count;
     uint64_t entropy = masscan->seed;
+    struct Output *out;
 
     LOG(1, "[+] starting transmit thread #%u\n", parms->nic_index);
 
@@ -275,6 +276,11 @@ infinite:
         end = start + masscan->resume.count;
     end += retries * rate;
 
+    /*
+     * Open output. This is where all scanned IP addresses are reported
+     * when using redis-queue output format
+     */
+    out = output_create(masscan, parms->nic_index);
 
     /* -----------------
      * the main loop
@@ -347,7 +353,7 @@ infinite:
 
                 ip_me = src_ipv6;
                 port_me = src_port;
-                
+
                 cookie = syn_cookie_ipv6(ip_them, port_them, ip_me, port_me, entropy);
 
                 rawsock_send_probe_ipv6(
@@ -373,6 +379,28 @@ infinite:
 
                 ip_them = rangelist_pick(&masscan->targets.ipv4, xXx % count_ipv4);
                 port_them = rangelist_pick(&masscan->targets.ports, xXx / count_ipv4);
+
+                if (out->format == Output_Redis_Queue && xXx / count_ipv4 == 0) {
+                    /*
+                     * Guaranteed to enter only once per IP address.
+                     * We are only interested to do this when redis-queue
+                     * is specified as output format.
+                     */
+                    ipaddress ip_addr;
+                    ip_addr.ipv4 = ip_them;
+                    ip_addr.version = 4;
+
+                    output_report_status(
+                                    out,
+                                    time(0),
+                                    PortStatus_Open,
+                                    ip_addr,
+                                    0,
+                                    0,
+                                    0,
+                                    0,
+                                    0);
+                }
 
                 /*
                  * SYN-COOKIE LOGIC
@@ -495,6 +523,8 @@ infinite:
             pixie_usleep(100);
         }
     }
+
+    output_destroy(out);
 
     /* Thread is about to exit */
     parms->done_transmitting = 1;
