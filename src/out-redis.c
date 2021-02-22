@@ -330,7 +330,8 @@ redis_queue_out_status(struct Output *out, FILE *fp, time_t timestamp,
     char values[64];
     int values_length;
 
-    ip_string_length = sprintf_s(ip_string, sizeof(ip_string), "%s", ipaddress_fmt(ip).string);
+    ip_string_length = sprintf_s(ip_string, sizeof(ip_string), "%d.%d.%d.%d",
+        (ip.ipv4 >> 24) & 0xFF, (ip.ipv4 >> 16) & 0xFF, (ip.ipv4 >> 8) & 0xFF, (ip.ipv4 >> 0) & 0xFF);
     port_string_length = sprintf_s(port_string, sizeof(port_string), "%u,%s", port, name_from_ip_proto(ip_proto));
 
 /**3
