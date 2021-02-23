@@ -66,6 +66,7 @@
 #include "util-checksum.h"
 #include "massip-parse.h"
 #include "massip-port.h"
+#include "bitmap.h"
 
 #include <assert.h>
 #include <limits.h>
@@ -380,28 +381,6 @@ infinite:
                 ip_them = rangelist_pick(&masscan->targets.ipv4, xXx % count_ipv4);
                 port_them = rangelist_pick(&masscan->targets.ports, xXx / count_ipv4);
 
-                if (out->format == Output_Redis_Queue && xXx / count_ipv4 == 0) {
-                    /*
-                     * Guaranteed to enter only once per IP address.
-                     * We are only interested to do this when redis-queue
-                     * is specified as output format.
-                     */
-                    ipaddress ip_addr;
-                    ip_addr.ipv4 = ip_them;
-                    ip_addr.version = 4;
-
-                    output_report_status(
-                                    out,
-                                    time(0),
-                                    PortStatus_Open,
-                                    ip_addr,
-                                    0,
-                                    0,
-                                    0,
-                                    0,
-                                    0);
-                }
-
                 /*
                  * SYN-COOKIE LOGIC
                  *  Figure out the source IP/port, and the SYN cookie
@@ -578,9 +557,8 @@ receive_thread(void *v)
     uint64_t entropy = masscan->seed;
     struct ResetFilter *rf;
     struct stack_t *stack = parms->stack;
+	char *ip_bitmap = CALLOC(1, 512*1024*1024); // all possible ipv4 addresses
 
-    
-    
     /* For reducing RST responses, see rstfilter_is_filter() below */
     rf = rstfilter_create(entropy, 16384);
 
@@ -1075,7 +1053,28 @@ receive_thread(void *v)
                         parsed.ip_ttl,
                         parsed.mac_src
                         );
-            
+
+            if (out->format == Output_Redis_Queue && !in_bitmap(ip_bitmap, ip_them.ipv4)) {
+                /*
+                 * Guaranteed to enter only once per IP address.
+                 * We are only interested to do this when redis-queue
+                 * is specified as output format.
+                 */
+
+                output_report_status(
+                                out,
+                                time(0),
+                                PortStatus_Open,
+                                ip_them,
+                                0,
+                                0,
+                                0,
+                                0,
+                                0);
+                set_bitmap(ip_bitmap, ip_them.ipv4);
+            }
+
+
 
             /*
              * Send RST so other side isn't left hanging (only doing this in
@@ -1105,6 +1104,8 @@ end:
     output_destroy(out);
     if (pcapfile)
         pcapfile_close(pcapfile);
+
+	free(ip_bitmap);
 
     /*TODO: free stack packet buffers */
 
