@@ -678,19 +678,20 @@ struct PcapFile *pcapfile_openwrite(const char *capfilename, unsigned linktype)
     buf[21] = (char)(linktype>>8);
 
 
-    fp = fopen(capfilename, "wb");
+    fp = fopen(capfilename, "ab");
     if (fp == NULL) {
         fprintf(stderr, "Could not open capture file\n");
         perror(capfilename);
         return 0;
     }
 
-
-    if (fwrite(buf, 1, 24, fp) != 24) {
-        fprintf(stderr, "Could not write capture file header\n");
-        perror(capfilename);
-        fclose(fp);
-        return 0;
+    if (ftell(fp) == 0) {
+        if (fwrite(buf, 1, 24, fp) != 24) {
+            fprintf(stderr, "Could not write capture file header\n");
+            perror(capfilename);
+            fclose(fp);
+            return 0;
+        }
     }
 
     {
