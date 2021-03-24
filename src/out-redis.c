@@ -58,7 +58,7 @@ parse_state_machine(struct Output *out, const unsigned char *px, size_t length)
             break;
         default:
             LOG(0, "redis: unexpected data: %.*s\n", (int)(length-i), px+i);
-            exit(1);
+            //exit(1);
             break;
         }
         break;
@@ -69,12 +69,12 @@ parse_state_machine(struct Output *out, const unsigned char *px, size_t length)
             state = 0;
             if (out->redis.outstanding == 0) {
                 LOG(0, "redis: out of sync\n");
-                exit(1);
+                //exit(1);
             }
             out->redis.outstanding--;
         } else {
             LOG(0, "redis: unexpected data: %.*s\n", (int)(length-i), px+i);
-            exit(1);
+            //exit(1);
         }
         break;
     case P:
@@ -90,11 +90,11 @@ parse_state_machine(struct Output *out, const unsigned char *px, size_t length)
             }
         } else {
             LOG(0, "redis: unexpected data: %.*s\n", (int)(length-i), px+i);
-            exit(1);
+            //exit(1);
         }
     default:
         LOG(0, "redis: unexpected state: %u\n", state);
-        exit(1);
+        //exit(1);
     }
     out->redis.state = state;
     return 0;
@@ -124,11 +124,11 @@ clean_response_queue(struct Output *out, SOCKET fd)
         return 1;
     if (x < 0) {
         LOG(0, "redis:select() failed\n");
-        exit(1);
+        //exit(1);
     }
     if (x != 1) {
         LOG(0, "redis:select() failed\n");
-        exit(1);
+        //exit(1);
     }
 
     /*
@@ -137,7 +137,7 @@ clean_response_queue(struct Output *out, SOCKET fd)
     bytes_read = recv(fd, (char*)buf, sizeof(buf), 0);
     if (bytes_read == 0) {
         LOG(0, "redis:recv() failed\n");
-        exit(1);
+        //exit(1);
     }
 
     return parse_state_machine(out, buf, bytes_read);
@@ -158,13 +158,13 @@ redis_out_open(struct Output *out, FILE *fp)
     count = send((SOCKET)fd, "PING\r\n", 6, 0);
     if (count != 6) {
         LOG(0, "redis: send(ping) failed\n");
-        exit(1);
+        //exit(1);
     }
 
     count = recv_line((SOCKET)fd, line, sizeof(line));
     if (count != 7 && memcmp(line, "+PONG\r\n", 7) != 0) {
         LOG(0, "redis: unexpected response from redis server: %s\n", line);
-        exit(1);
+        //exit(1);
     }
 }
 
@@ -182,13 +182,13 @@ redis_out_close(struct Output *out, FILE *fp)
     count = send((SOCKET)fd, "QUIT\r\n", 6, 0);
     if (count != 6) {
         LOG(0, "redis: send(quit) failed\n");
-        exit(1);
+        //exit(1);
     }
 
     count = recv_line((SOCKET)fd, line, sizeof(line));
     if ((count != 5 && memcmp(line, "+OK\r\n", 5) != 0) && (count != 4 && memcmp(line, ":0\r\n", 4) != 0)){
         LOG(0, "redis: unexpected response from redis server: %s\n", line);
-        exit(1);
+        //exit(1);
     }
 }
 
@@ -237,8 +237,8 @@ myvalue
 
     count = send((SOCKET)fd, line, (int)strlen(line), 0);
     if (count != strlen(line)) {
-        LOG(0, "redis: error sending data\n");
-        exit(1);
+        LOG(0, "\nredis: error sending data: %s\n", line);
+        //exit(1);
     }
     out->redis.outstanding++;
 
@@ -257,8 +257,8 @@ myvalue
 
     count = send((SOCKET)fd, line, (int)strlen(line), 0);
     if (count != strlen(line)) {
-        LOG(0, "redis: error sending data\n");
-        exit(1);
+        LOG(0, "\nredis: error sending data: %s\n", line);
+        //exit(1);
     }
     out->redis.outstanding++;
 
@@ -282,12 +282,14 @@ myvalue
 
     count = send((SOCKET)fd, line, (int)line_length, 0);
     if (count != (size_t)line_length) {
-        LOG(0, "redis: error sending data\n");
-        exit(1);
+        LOG(0, "\nredis: error sending data: %s\n", line);
+        //exit(1);
     }
     out->redis.outstanding++;
 
-    clean_response_queue(out, (SOCKET)fd);
+    char crap[2048];
+    recv(fd, crap, sizeof(crap), 0);
+    //clean_response_queue(out, (SOCKET)fd);
 
 }
 
@@ -361,8 +363,8 @@ myvalue
 
     count = send((SOCKET)fd, line, (int)line_length, 0);
     if (count != (size_t)line_length) {
-        LOG(0, "redis: error sending data\n");
-        exit(1);
+        LOG(0, "\nredis: error sending data: %s\n", line);
+        //exit(1);
     }
     out->redis.outstanding++;
 
