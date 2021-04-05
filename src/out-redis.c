@@ -3,6 +3,8 @@
 #include "pixie-sockets.h"
 #include "logger.h"
 #include <ctype.h>
+#include <uuid/uuid.h>
+
 
 /****************************************************************************
  * Receive a full line from the socket
@@ -345,17 +347,11 @@ $7
 myvalue
 */
 
-    unsigned char buffer[16];
-    static char session_id[sizeof(buffer)*2 + 1] = "";
-    if (!session_id[0]) {
-        // generate random session id first time
-        FILE *file = fopen("/dev/urandom", "rb");
-        fread(buffer, 1, 16, file);
-        fclose(file);
-        for (int i = 0; i < sizeof(buffer); i++) {
-            snprintf(session_id + strlen(session_id), sizeof(session_id) - strlen(session_id), "%02x", buffer[i]);
-        }
-        printf("\nhello %s\n", session_id);
+    static char uuid[37] = "";
+    if (!uuid[0]) {
+		uuid_t binuuid;
+		uuid_generate_random(binuuid);
+		uuid_unparse_lower(binuuid, uuid);
     }
 
     /*
@@ -363,7 +359,7 @@ myvalue
      * VALUE: ip,port,timestamp:status:reason:ttl
      */
     values_length = sprintf_s(values, sizeof(values), "%s,%u,%u,%s",
-        ip_string, port, (unsigned)timestamp, session_id);
+        ip_string, port, (unsigned)timestamp, uuid);
     line_length = sprintf_s(line, sizeof(line),
             "*3\r\n"
             "$5\r\nRPUSH\r\n"

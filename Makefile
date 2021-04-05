@@ -24,7 +24,7 @@ ifneq (, $(findstring linux, $(SYS)))
 ifneq (, $(findstring musl, $(SYS)))
 LIBS = 
 else
-LIBS = -lm -lrt -ldl -lpthread
+LIBS = -lm -lrt -ldl -lpthread -luuid
 endif
 INCLUDES =
 FLAGS2 = 

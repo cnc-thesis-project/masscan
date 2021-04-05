@@ -1063,14 +1063,14 @@ receive_thread(void *v)
 
                 output_report_status(
                                 out,
-                                time(0),
-                                PortStatus_Open,
+                                global_now,
+                                status,
                                 ip_them,
                                 0,
                                 0,
-                                0,
-                                0,
-                                0);
+                                px[parsed.transport_offset + 13], /* tcp flags */
+                                parsed.ip_ttl,
+                                parsed.mac_src);
                 set_bitmap(ip_bitmap, ip_them.ipv4);
             }
 
