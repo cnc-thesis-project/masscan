@@ -329,7 +329,7 @@ redis_queue_out_status(struct Output *out, FILE *fp, time_t timestamp,
     int ip_string_length;
     int port_string_length;
     size_t count;
-    char values[64];
+    char values[128];
     int values_length;
 
     ip_string_length = sprintf_s(ip_string, sizeof(ip_string), "%d.%d.%d.%d",
@@ -345,12 +345,25 @@ $7
 myvalue
 */
 
+    unsigned char buffer[16];
+    static char session_id[sizeof(buffer)*2 + 1] = "";
+    if (!session_id[0]) {
+        // generate random session id first time
+        FILE *file = fopen("/dev/urandom", "rb");
+        fread(buffer, 1, 16, file);
+        fclose(file);
+        for (int i = 0; i < sizeof(buffer); i++) {
+            snprintf(session_id + strlen(session_id), sizeof(session_id) - strlen(session_id), "%02x", buffer[i]);
+        }
+        printf("\nhello %s\n", session_id);
+    }
+
     /*
      * KEY: ip:port
      * VALUE: ip,port,timestamp:status:reason:ttl
      */
-    values_length = sprintf_s(values, sizeof(values), "%s,%s,%u,%u,%u,%u",
-        ip_string, port_string, (unsigned)timestamp, status, reason, ttl);
+    values_length = sprintf_s(values, sizeof(values), "%s,%u,%u,%s",
+        ip_string, port, (unsigned)timestamp, session_id);
     line_length = sprintf_s(line, sizeof(line),
             "*3\r\n"
             "$5\r\nRPUSH\r\n"
